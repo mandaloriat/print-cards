@@ -1,0 +1,13 @@
+Metadata-Version: 2.4
+Name: print-cards
+Version: 0.1.0
+Summary: Generate PDFs with images arranged in a grid for pre-cut sheets
+License: MIT
+Keywords: pdf,print,cards,grid,images
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+Requires-Dist: reportlab>=4.0
+Requires-Dist: Pillow>=10.0
+
+# print-cards
+Programmino per creare pdf con disposte alcune immagini a griglia per agevolare la stampa su fogli pre-tagliati

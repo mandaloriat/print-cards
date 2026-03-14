@@ -1,0 +1,2 @@
+[console_scripts]
+print-cards = print_cards.cli:main
