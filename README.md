@@ -45,6 +45,7 @@ usage: print-cards [-h] [--rows ROWS] [--cols COLS] [--format FORMAT]
                    [--margin-top MARGIN_TOP] [--margin-bottom MARGIN_BOTTOM]
                    [--margin-left MARGIN_LEFT] [--margin-right MARGIN_RIGHT]
                    [--output OUTPUT]
+                   [--image ROW,COL,PATH ...]
 ```
 
 | Option | Short | Description |
@@ -61,6 +62,7 @@ usage: print-cards [-h] [--rows ROWS] [--cols COLS] [--format FORMAT]
 | `--margin-left` | | Left margin in mm (default: auto-centred) |
 | `--margin-right` | | Right margin in mm (default: auto-centred) |
 | `--output` | `-o` | Output PDF path (asked interactively if omitted) |
+| `--image` | | Image for a grid position as `ROW,COL,PATH`. Repeat for every cell. When all positions are covered the tool runs non-interactively (used by the GUI). |
 
 Any dimension option left out on the command line will be asked interactively.
 
@@ -113,4 +115,39 @@ pip install -e .
 pip install pytest
 pytest
 ```
+
+## GUI (Electron)
+
+A minimal Electron-based desktop GUI is available in the `gui/` directory.  It
+lets you configure the grid layout, pick images for each cell with a file
+chooser, and hit **Generate PDF** — without ever touching the terminal.
+
+### Requirements
+
+* Python 3.9+ with `print-cards` installed (`pip install .`)
+* Node.js 18+ and npm
+
+### Installation
+
+```bash
+cd gui
+npm install
+```
+
+### Running
+
+```bash
+cd gui
+npm start
+```
+
+The app opens a window with two steps:
+
+1. **Layout** — choose page format, rows/columns, element dimensions (mm),
+   spacing, and optional margins (leave blank to auto-centre).
+2. **Images** — a card appears for every grid position; click **Choose…** to
+   pick an image file, set the output PDF path, then click **Generate PDF**.
+
+The GUI calls `python3 -m print_cards.cli` internally, so the same Python
+environment that can run `print-cards` from the command line is used.
 

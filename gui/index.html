@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: file:;" />
+  <title>print-cards</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --accent: #4f6ef7;
+      --accent-hover: #3a56d4;
+      --danger: #d9534f;
+      --success: #3a9e5f;
+      --bg: #f4f5f7;
+      --surface: #ffffff;
+      --border: #d0d5dd;
+      --text: #1a1a2e;
+      --muted: #6b7280;
+      --radius: 8px;
+      --shadow: 0 2px 8px rgba(0,0,0,.10);
+    }
+
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      font-size: 14px;
+      color: var(--text);
+      background: var(--bg);
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    h1 { font-size: 22px; font-weight: 700; margin-bottom: 20px; color: var(--accent); }
+    h2 { font-size: 16px; font-weight: 600; margin-bottom: 14px; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px 24px;
+      margin-bottom: 20px;
+    }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px 16px; }
+    .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px 16px; }
+
+    .field { display: flex; flex-direction: column; gap: 4px; }
+    .field label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
+    .field input, .field select {
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      font-size: 14px;
+      color: var(--text);
+      background: var(--surface);
+      transition: border-color .15s;
+    }
+    .field input:focus, .field select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(79,110,247,.18);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s, opacity .15s;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: #e4e6eb; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    .row-actions { display: flex; gap: 10px; margin-top: 16px; align-items: center; }
+
+    /* Image grid */
+    #image-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .img-cell {
+      width: 140px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      background: var(--surface);
+    }
+    .img-cell .thumb {
+      width: 100%;
+      height: 100px;
+      object-fit: contain;
+      background: var(--bg);
+      display: block;
+    }
+    .img-cell .thumb-placeholder {
+      width: 100%;
+      height: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      color: var(--muted);
+      font-size: 28px;
+    }
+    .img-cell .cell-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-align: center;
+      padding: 4px 0 2px;
+    }
+    .img-cell .btn-choose {
+      margin: 0 8px 8px;
+      padding: 5px 0;
+      font-size: 12px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      cursor: pointer;
+      font-weight: 600;
+      color: var(--text);
+      transition: background .15s;
+    }
+    .img-cell .btn-choose:hover { background: #e4e6eb; }
+    .img-cell.has-image { border-color: var(--accent); }
+    .img-cell.has-image .cell-label { color: var(--accent); }
+
+    /* Output path row */
+    .output-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .output-row input {
+      flex: 1;
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      font-size: 13px;
+      color: var(--text);
+      background: var(--surface);
+    }
+    .output-row input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(79,110,247,.18);
+    }
+    .output-row label { font-size: 12px; font-weight: 600; color: var(--muted); white-space: nowrap; text-transform: uppercase; letter-spacing: .4px; }
+
+    /* Status banner */
+    #status {
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-weight: 500;
+      margin-top: 4px;
+      display: none;
+    }
+    #status.success { background: #ecfdf5; border: 1px solid #86efac; color: var(--success); display: block; }
+    #status.error   { background: #fef2f2; border: 1px solid #fca5a5; color: var(--danger);  display: block; }
+    #status.info    { background: #eff6ff; border: 1px solid #93c5fd; color: #1d4ed8;         display: block; }
+
+    /* Spinner */
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .hint { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+    hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+  </style>
+</head>
+<body>
+
+  <h1>🖨 print-cards</h1>
+
+  <!-- ── Step 1: Layout ─────────────────────────────────────────────────── -->
+  <div class="card" id="step-layout">
+    <h2>1 · Layout</h2>
+
+    <div class="grid-3">
+      <div class="field">
+        <label>Page Format</label>
+        <select id="format">
+          <option>A4</option><option>A3</option><option>A5</option>
+          <option>Letter</option><option>Legal</option>
+          <option>A4L</option><option>A3L</option><option>A5L</option>
+          <option>LetterL</option><option>LegalL</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Rows</label>
+        <input type="number" id="rows" min="1" step="1" value="2" />
+      </div>
+      <div class="field">
+        <label>Columns</label>
+        <input type="number" id="cols" min="1" step="1" value="2" />
+      </div>
+    </div>
+
+    <hr />
+
+    <div class="grid-4">
+      <div class="field">
+        <label>Element Width (mm)</label>
+        <input type="number" id="element-width" min="0.1" step="0.1" value="85.6" />
+      </div>
+      <div class="field">
+        <label>Element Height (mm)</label>
+        <input type="number" id="element-height" min="0.1" step="0.1" value="54" />
+      </div>
+      <div class="field">
+        <label>H-Spacing (mm)</label>
+        <input type="number" id="spacing-h" min="0" step="0.1" value="0" />
+      </div>
+      <div class="field">
+        <label>V-Spacing (mm)</label>
+        <input type="number" id="spacing-v" min="0" step="0.1" value="0" />
+      </div>
+    </div>
+
+    <hr />
+
+    <div class="grid-4">
+      <div class="field">
+        <label>Margin Top (mm)</label>
+        <input type="number" id="margin-top" step="0.1" placeholder="auto" />
+      </div>
+      <div class="field">
+        <label>Margin Bottom (mm)</label>
+        <input type="number" id="margin-bottom" step="0.1" placeholder="auto" />
+      </div>
+      <div class="field">
+        <label>Margin Left (mm)</label>
+        <input type="number" id="margin-left" step="0.1" placeholder="auto" />
+      </div>
+      <div class="field">
+        <label>Margin Right (mm)</label>
+        <input type="number" id="margin-right" step="0.1" placeholder="auto" />
+      </div>
+    </div>
+    <p class="hint">Leave margins blank to auto-centre the grid on the page.</p>
+
+    <div class="row-actions">
+      <button class="btn btn-primary" id="btn-set-layout">Set Layout →</button>
+    </div>
+  </div>
+
+  <!-- ── Step 2: Images + Generate ─────────────────────────────────────── -->
+  <div class="card" id="step-images" style="display:none;">
+    <h2>2 · Images</h2>
+
+    <div id="image-grid"></div>
+
+    <hr />
+
+    <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:16px;">
+      <label style="font-size:12px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.4px;">Output PDF</label>
+      <div class="output-row">
+        <input type="text" id="output-path" placeholder="output.pdf" />
+        <button class="btn btn-secondary" id="btn-browse-output">Browse…</button>
+      </div>
+    </div>
+
+    <div class="row-actions">
+      <button class="btn btn-secondary" id="btn-back">← Back</button>
+      <button class="btn btn-primary" id="btn-generate">Generate PDF</button>
+    </div>
+  </div>
+
+  <!-- ── Status ─────────────────────────────────────────────────────────── -->
+  <div id="status"></div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

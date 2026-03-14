@@ -1,0 +1,14 @@
+{
+  "name": "print-cards-gui",
+  "version": "0.1.0",
+  "description": "Electron GUI for print-cards",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": [],
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^41.0.0"
+  }
+}
