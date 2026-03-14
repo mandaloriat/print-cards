@@ -104,3 +104,46 @@ class TestCLIRun:
                 "--output", output,
             ])
         assert Path(output).exists()
+
+    def test_image_flag_noninteractive(self, tmp_path):
+        """--image ROW,COL,PATH for every position runs with no prompts."""
+        img = _make_png(tmp_path)
+        output = str(tmp_path / "flag.pdf")
+        run([
+            "--rows", "2", "--cols", "2",
+            "--element-width", "80", "--element-height", "60",
+            "--image", f"1,1,{img}",
+            "--image", f"1,2,{img}",
+            "--image", f"2,1,{img}",
+            "--image", f"2,2,{img}",
+            "--output", output,
+        ])
+        assert Path(output).exists()
+
+    def test_image_flag_partial_falls_back_to_interactive(self, tmp_path):
+        """When only some positions are given via --image, the missing ones are
+        still prompted interactively (all positions are re-prompted in interactive
+        mode)."""
+        img = _make_png(tmp_path)
+        output = str(tmp_path / "partial.pdf")
+        # 1×2 grid; only (1,1) supplied via flag → interactive mode prompts
+        # for both (1,1) and (1,2)
+        with patch("builtins.input", side_effect=[img, img]):
+            run([
+                "--rows", "1", "--cols", "2",
+                "--element-width", "80", "--element-height", "60",
+                "--image", f"1,1,{img}",
+                "--output", output,
+            ])
+        assert Path(output).exists()
+
+    def test_image_flag_bad_format_exits(self, tmp_path):
+        """Malformed --image value causes sys.exit(1)."""
+        with pytest.raises(SystemExit) as exc_info:
+            run([
+                "--rows", "1", "--cols", "1",
+                "--element-width", "50", "--element-height", "50",
+                "--image", "bad-value-no-commas",
+                "--output", str(tmp_path / "x.pdf"),
+            ])
+        assert exc_info.value.code == 1

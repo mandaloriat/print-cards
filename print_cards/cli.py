@@ -240,6 +240,15 @@ def run(args=None) -> None:
         "--output", "-o", default=None,
         help="Output PDF file path (will also be asked interactively if omitted)",
     )
+    parser.add_argument(
+        "--image", action="append", default=None,
+        metavar="ROW,COL,PATH",
+        help=(
+            "Image file for a specific grid position, given as ROW,COL,PATH "
+            "(1-based indices). May be repeated for every position. When all "
+            "positions are covered the tool runs fully non-interactively."
+        ),
+    )
 
     parsed = parser.parse_args(args)
 
@@ -270,16 +279,46 @@ def run(args=None) -> None:
         sys.exit(1)
 
     # --- Collect image paths ---
-    print(
-        f"\nLayout: {layout.rows} row(s) × {layout.cols} col(s) on {layout.page_format} "
-        f"({layout.element_width}×{layout.element_height} mm per element)\n"
-        "Please provide an image file for each grid position:\n"
-    )
+    # Parse any --image ROW,COL,PATH arguments supplied on the command line.
+    cli_images: Dict[Tuple[int, int], str] = {}
+    if parsed.image:
+        for img_spec in parsed.image:
+            parts = img_spec.split(",", 2)
+            if len(parts) != 3:
+                print(
+                    f"Error: --image value must be ROW,COL,PATH, got: {img_spec!r}",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            try:
+                row_idx, col_idx = int(parts[0]), int(parts[1])
+            except ValueError:
+                print(
+                    f"Error: ROW and COL in --image must be integers, got: {img_spec!r}",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            cli_images[(row_idx, col_idx)] = parts[2]
 
-    images: Dict[Tuple[int, int], str] = {}
-    for row in range(1, layout.rows + 1):
-        for col in range(1, layout.cols + 1):
-            images[(row, col)] = _prompt_image_path(row, col)
+    all_positions = {
+        (r, c)
+        for r in range(1, layout.rows + 1)
+        for c in range(1, layout.cols + 1)
+    }
+
+    if all_positions.issubset(cli_images.keys()):
+        # Every position was supplied via --image; run non-interactively.
+        images = {pos: cli_images[pos] for pos in all_positions}
+    else:
+        print(
+            f"\nLayout: {layout.rows} row(s) × {layout.cols} col(s) on {layout.page_format} "
+            f"({layout.element_width}×{layout.element_height} mm per element)\n"
+            "Please provide an image file for each grid position:\n"
+        )
+        images = {}
+        for row in range(1, layout.rows + 1):
+            for col in range(1, layout.cols + 1):
+                images[(row, col)] = _prompt_image_path(row, col)
 
     # --- Output path ---
     if parsed.output:

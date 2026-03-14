@@ -24,3 +24,7 @@ env/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Node / Electron GUI
+gui/node_modules/
+gui/package-lock.json
