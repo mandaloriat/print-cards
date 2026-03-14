@@ -1,0 +1,106 @@
+"""Tests for print_cards.cli."""
+
+from __future__ import annotations
+
+import io
+import struct
+import zlib
+from pathlib import Path
+from unittest.mock import patch
+
+import pytest
+
+from print_cards.cli import run
+
+
+# ---------------------------------------------------------------------------
+# Helper – tiny valid PNG
+# ---------------------------------------------------------------------------
+
+def _make_png(tmp_path: Path, name: str = "img.png") -> str:
+    def _chunk(tag: bytes, data: bytes) -> bytes:
+        length = struct.pack(">I", len(data))
+        crc = struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF)
+        return length + tag + data + crc
+
+    w, h = 10, 10
+    ihdr = _chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0))
+    raw = b"".join(b"\x00" + b"\xFF\xFF\xFF" * w for _ in range(h))
+    idat = _chunk(b"IDAT", zlib.compress(raw))
+    iend = _chunk(b"IEND", b"")
+    data = b"\x89PNG\r\n\x1a\n" + ihdr + idat + iend
+    p = tmp_path / name
+    p.write_bytes(data)
+    return str(p)
+
+
+# ---------------------------------------------------------------------------
+# run() via CLI args + mocked interactive prompts
+# ---------------------------------------------------------------------------
+
+class TestCLIRun:
+    def test_basic_2x2_grid(self, tmp_path):
+        img = _make_png(tmp_path)
+        output = str(tmp_path / "result.pdf")
+
+        # 4 image prompts, then no interactive output prompt (--output supplied)
+        with patch("builtins.input", side_effect=[img, img, img, img]):
+            run([
+                "--rows", "2", "--cols", "2",
+                "--element-width", "80", "--element-height", "60",
+                "--output", output,
+            ])
+
+        assert Path(output).exists()
+
+    def test_missing_required_args_triggers_interactive(self, tmp_path):
+        """When rows/cols/dimensions are omitted, interactive prompts are used."""
+        img = _make_png(tmp_path)
+        output = str(tmp_path / "interactive.pdf")
+
+        # Interactive layout: format, rows, cols, ew, eh, sh, sv, mt, mb, ml, mr
+        # then 1 image prompt
+        layout_inputs = ["A4", "1", "1", "50", "50", "0", "0", "", "", "", ""]
+        image_inputs = [img]
+        with patch("builtins.input", side_effect=layout_inputs + image_inputs):
+            run(["--output", output])
+
+        assert Path(output).exists()
+
+    def test_invalid_layout_exits(self, tmp_path, capsys):
+        """Grid too wide for the page should cause sys.exit(1)."""
+        with pytest.raises(SystemExit) as exc_info:
+            with patch("builtins.input", return_value=""):
+                run([
+                    "--rows", "1", "--cols", "10",
+                    "--element-width", "30",   # 10 * 30 = 300 > 210 mm (A4)
+                    "--element-height", "30",
+                    "--output", str(tmp_path / "x.pdf"),
+                ])
+        assert exc_info.value.code == 1
+
+    def test_output_extension_appended(self, tmp_path):
+        img = _make_png(tmp_path)
+        output_no_ext = str(tmp_path / "no_ext")
+
+        with patch("builtins.input", side_effect=[img]):
+            run([
+                "--rows", "1", "--cols", "1",
+                "--element-width", "50", "--element-height", "50",
+                "--output", output_no_ext,
+            ])
+
+        assert Path(tmp_path / "no_ext.pdf").exists()
+
+    def test_spacing_and_margins(self, tmp_path):
+        img = _make_png(tmp_path)
+        output = str(tmp_path / "spaced.pdf")
+        with patch("builtins.input", side_effect=[img, img, img, img]):
+            run([
+                "--rows", "2", "--cols", "2",
+                "--element-width", "60", "--element-height", "40",
+                "--spacing-h", "5", "--spacing-v", "5",
+                "--margin-left", "20", "--margin-top", "20",
+                "--output", output,
+            ])
+        assert Path(output).exists()
