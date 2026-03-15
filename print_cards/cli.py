@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
-from .generator import GridLayout, PDFGenerator, PAGE_FORMATS
+from .generator import GridLayout, PDFGenerator, PAGE_FORMATS, IMAGE_FIT_MODES
 
 
 def _prompt(message: str, default: Optional[str] = None) -> str:
@@ -111,6 +111,7 @@ def _build_layout_from_args(args: "argparse.Namespace") -> GridLayout:  # noqa: 
         margin_left=args.margin_left,
         margin_right=args.margin_right,
         page_format=args.format,
+        image_fit=args.image_fit,
     )
 
 
@@ -132,6 +133,11 @@ def _build_layout_interactive() -> GridLayout:
 
     sh = _prompt_float("Horizontal spacing between elements (mm)", 0.0)
     sv = _prompt_float("Vertical spacing between elements (mm)", 0.0)
+    valid_image_fit = ", ".join(IMAGE_FIT_MODES)
+    image_fit = _prompt(f"Image fit mode ({valid_image_fit})", "fit")
+    while image_fit not in IMAGE_FIT_MODES:
+        print(f"  Unknown image fit mode. Valid options: {valid_image_fit}")
+        image_fit = _prompt("Image fit mode", "fit")
 
     print(
         "\nLeave margin fields empty to auto-centre the grid on the page.\n"
@@ -162,6 +168,7 @@ def _build_layout_interactive() -> GridLayout:
         margin_left=_parse_optional_float(ml_raw),
         margin_right=_parse_optional_float(mr_raw),
         page_format=fmt,
+        image_fit=image_fit,
     )
 
 
@@ -211,6 +218,12 @@ def run(args=None) -> None:
     parser.add_argument(
         "--element-height", type=float, default=None,
         help="Height of each element in mm",
+    )
+    parser.add_argument(
+        "--image-fit",
+        default="fit",
+        choices=list(IMAGE_FIT_MODES),
+        help="How each image is placed inside its box: fit, fill, stretch, or crop (default: fit)",
     )
     parser.add_argument(
         "--spacing-h", type=float, default=0.0,

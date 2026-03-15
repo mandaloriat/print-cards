@@ -94,6 +94,10 @@ class TestGridLayoutValidate:
         with pytest.raises(ValueError, match="element_width"):
             self._base(element_width=-1.0).validate()
 
+    def test_invalid_image_fit_raises(self):
+        with pytest.raises(ValueError, match="image_fit"):
+            self._base(image_fit="bad-mode").validate()
+
     def test_negative_spacing_raises(self):
         with pytest.raises(ValueError, match="spacing_h"):
             self._base(spacing_h=-1.0).validate()
@@ -151,6 +155,66 @@ class TestGridLayoutDimensions:
 # ---------------------------------------------------------------------------
 
 class TestPDFGenerator:
+    def test_image_box_fit_mode(self):
+        result = PDFGenerator._image_box(
+            image_width_pt=200.0,
+            image_height_pt=100.0,
+            box_x_pt=10.0,
+            box_y_pt=20.0,
+            box_width_pt=50.0,
+            box_height_pt=50.0,
+            mode="fit",
+        )
+        assert result == pytest.approx((10.0, 32.5, 50.0, 25.0, 0.0))
+
+    def test_image_box_fill_mode(self):
+        result = PDFGenerator._image_box(
+            image_width_pt=200.0,
+            image_height_pt=100.0,
+            box_x_pt=10.0,
+            box_y_pt=20.0,
+            box_width_pt=50.0,
+            box_height_pt=50.0,
+            mode="fill",
+        )
+        assert result == pytest.approx((-15.0, 20.0, 100.0, 50.0, 1.0))
+
+    def test_image_box_stretch_mode(self):
+        result = PDFGenerator._image_box(
+            image_width_pt=200.0,
+            image_height_pt=100.0,
+            box_x_pt=10.0,
+            box_y_pt=20.0,
+            box_width_pt=50.0,
+            box_height_pt=50.0,
+            mode="stretch",
+        )
+        assert result == pytest.approx((10.0, 20.0, 50.0, 50.0, 0.0))
+
+    def test_image_box_crop_mode_does_not_upscale(self):
+        result = PDFGenerator._image_box(
+            image_width_pt=20.0,
+            image_height_pt=10.0,
+            box_x_pt=10.0,
+            box_y_pt=20.0,
+            box_width_pt=50.0,
+            box_height_pt=50.0,
+            mode="crop",
+        )
+        assert result == pytest.approx((25.0, 40.0, 20.0, 10.0, 0.0))
+
+    def test_image_box_crop_mode_clips_large_image(self):
+        result = PDFGenerator._image_box(
+            image_width_pt=200.0,
+            image_height_pt=100.0,
+            box_x_pt=10.0,
+            box_y_pt=20.0,
+            box_width_pt=50.0,
+            box_height_pt=50.0,
+            mode="crop",
+        )
+        assert result == pytest.approx((-15.0, 20.0, 100.0, 50.0, 1.0))
+
     def test_generates_pdf_file(self, tmp_path):
         layout = GridLayout(
             rows=2, cols=2,
@@ -228,5 +292,19 @@ class TestPDFGenerator:
                 page_format=fmt,
             )
             output = str(tmp_path / f"out_{fmt}.pdf")
+            PDFGenerator(layout).generate({(1, 1): img}, output)
+            assert Path(output).exists()
+
+    def test_all_image_fit_modes(self, tmp_path):
+        img = _make_png(tmp_path, width=120, height=60)
+        for mode in ("fit", "fill", "stretch", "crop"):
+            layout = GridLayout(
+                rows=1,
+                cols=1,
+                element_width=40.0,
+                element_height=40.0,
+                image_fit=mode,
+            )
+            output = str(tmp_path / f"out_{mode}.pdf")
             PDFGenerator(layout).generate({(1, 1): img}, output)
             assert Path(output).exists()

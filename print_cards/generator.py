@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
 from reportlab.lib.pagesizes import A3, A4, A5, LETTER, LEGAL, landscape, portrait
 from reportlab.lib.units import mm
+from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
 
 
@@ -27,6 +28,8 @@ PAGE_FORMATS: Dict[str, Tuple[float, float]] = {
     "LetterL": landscape(LETTER),
     "LegalL": landscape(LEGAL),
 }
+
+IMAGE_FIT_MODES = ("fit", "fill", "stretch", "crop")
 
 
 def get_page_format(name: str) -> Tuple[float, float]:
@@ -67,6 +70,7 @@ class GridLayout:
     margin_left: Optional[float] = None
     margin_right: Optional[float] = None
     page_format: str = "A4"
+    image_fit: str = "fit"
 
     def page_size_pt(self) -> Tuple[float, float]:
         """Return page size in ReportLab points."""
@@ -112,6 +116,9 @@ class GridLayout:
             raise ValueError("spacing_h must be >= 0")
         if self.spacing_v < 0:
             raise ValueError("spacing_v must be >= 0")
+        if self.image_fit not in IMAGE_FIT_MODES:
+            valid = ", ".join(IMAGE_FIT_MODES)
+            raise ValueError(f"image_fit must be one of: {valid}")
 
         ml = self.resolved_margin_left()
         mt = self.resolved_margin_top()
@@ -153,6 +160,44 @@ class PDFGenerator:
 
     def __init__(self, layout: GridLayout) -> None:
         self.layout = layout
+
+    @staticmethod
+    def _image_box(
+        image_width_pt: float,
+        image_height_pt: float,
+        box_x_pt: float,
+        box_y_pt: float,
+        box_width_pt: float,
+        box_height_pt: float,
+        mode: str,
+    ) -> Tuple[float, float, float, float, bool]:
+        """Return drawImage geometry and whether the image must be clipped."""
+        if image_width_pt <= 0 or image_height_pt <= 0:
+            raise ValueError("Image dimensions must be > 0")
+
+        if mode == "stretch":
+            return box_x_pt, box_y_pt, box_width_pt, box_height_pt, False
+
+        width_ratio = box_width_pt / image_width_pt
+        height_ratio = box_height_pt / image_height_pt
+
+        if mode == "fit":
+            scale = min(width_ratio, height_ratio)
+        elif mode == "fill":
+            scale = max(width_ratio, height_ratio)
+        elif mode == "crop":
+            scale = min(1.0, max(width_ratio, height_ratio))
+        else:
+            raise ValueError(f"Unknown image_fit mode: {mode}")
+
+        draw_width_pt = image_width_pt * scale
+        draw_height_pt = image_height_pt * scale
+        draw_x_pt = box_x_pt + (box_width_pt - draw_width_pt) / 2.0
+        draw_y_pt = box_y_pt + (box_height_pt - draw_height_pt) / 2.0
+        clip = mode in {"fill", "crop"} and (
+            draw_width_pt > box_width_pt + 0.01 or draw_height_pt > box_height_pt + 0.01
+        )
+        return draw_x_pt, draw_y_pt, draw_width_pt, draw_height_pt, clip
 
     def generate(
         self,
@@ -210,16 +255,35 @@ class PDFGenerator:
                 # Row 1 is the topmost row
                 y_from_top_pt = mt_pt + (row - 1) * (eh_pt + sv_pt)
                 y_pt = page_h_pt - y_from_top_pt - eh_pt
+                image = ImageReader(img_path)
+                image_width_pt, image_height_pt = image.getSize()
+                draw_x_pt, draw_y_pt, draw_width_pt, draw_height_pt, clip = self._image_box(
+                    image_width_pt=image_width_pt,
+                    image_height_pt=image_height_pt,
+                    box_x_pt=x_pt,
+                    box_y_pt=y_pt,
+                    box_width_pt=ew_pt,
+                    box_height_pt=eh_pt,
+                    mode=self.layout.image_fit,
+                )
+
+                if clip:
+                    c.saveState()
+                    clip_path = c.beginPath()
+                    clip_path.rect(x_pt, y_pt, ew_pt, eh_pt)
+                    c.clipPath(clip_path, stroke=0, fill=0)
 
                 c.drawImage(
                     img_path,
-                    x_pt,
-                    y_pt,
-                    width=ew_pt,
-                    height=eh_pt,
-                    preserveAspectRatio=True,
-                    anchor="c",
+                    draw_x_pt,
+                    draw_y_pt,
+                    width=draw_width_pt,
+                    height=draw_height_pt,
+                    preserveAspectRatio=False,
                     mask="auto",
                 )
+
+                if clip:
+                    c.restoreState()
 
         c.save()

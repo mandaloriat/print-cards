@@ -72,6 +72,7 @@ ipcMain.handle('dialog:save-pdf', async () => {
  * config shape:
  *   rows, cols, elementWidth, elementHeight,
  *   spacingH, spacingV,
+ *   imageFit,
  *   marginTop, marginBottom, marginLeft, marginRight,  ('' = auto)
  *   format, outputPath,
  *   images: { "ROW,COL": "/path/to/image.png", … }
@@ -84,6 +85,7 @@ ipcMain.handle('generate-pdf', async (_event, config) => {
       '--cols',           String(config.cols),
       '--element-width',  String(config.elementWidth),
       '--element-height', String(config.elementHeight),
+      '--image-fit',      String(config.imageFit),
       '--spacing-h',      String(config.spacingH),
       '--spacing-v',      String(config.spacingV),
       '--format',         String(config.format),

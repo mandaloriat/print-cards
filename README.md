@@ -55,6 +55,7 @@ usage: print-cards [-h] [--rows ROWS] [--cols COLS] [--format FORMAT]
 | `--format` | `-f` | Page format: `A3`, `A4` *(default)*, `A5`, `Letter`, `Legal`, and landscape variants (`A4L`, …) |
 | `--element-width` | | Width of each element in **mm** |
 | `--element-height` | | Height of each element in **mm** |
+| `--image-fit` | | Image placement mode: `fit` *(default)*, `fill`, `stretch`, `crop` |
 | `--spacing-h` | | Horizontal spacing between elements in mm (default: 0) |
 | `--spacing-v` | | Vertical spacing between elements in mm (default: 0) |
 | `--margin-top` | | Top margin in mm (default: auto-centred) |
@@ -65,6 +66,13 @@ usage: print-cards [-h] [--rows ROWS] [--cols COLS] [--format FORMAT]
 | `--image` | | Image for a grid position as `ROW,COL,PATH`. Repeat for every cell. When all positions are covered the tool runs non-interactively (used by the GUI). |
 
 Any dimension option left out on the command line will be asked interactively.
+
+Image placement modes:
+
+* `fit`: preserve aspect ratio and show the whole image inside the box
+* `fill`: preserve aspect ratio, fill the whole box, crop overflow
+* `stretch`: force the image to the box dimensions, even if it distorts
+* `crop`: keep native size when smaller, otherwise crop to the box without enlarging
 
 ### Examples
 
@@ -150,4 +158,3 @@ The app opens a window with two steps:
 
 The GUI calls `python3 -m print_cards.cli` internally, so the same Python
 environment that can run `print-cards` from the command line is used.
-

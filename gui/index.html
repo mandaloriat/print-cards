@@ -243,6 +243,22 @@
       </div>
     </div>
 
+    <div class="grid-2" style="margin-top: 12px;">
+      <div class="field">
+        <label>Image Fit</label>
+        <select id="image-fit">
+          <option value="fit">fit · preserve ratio, show all</option>
+          <option value="fill">fill · preserve ratio, crop overflow</option>
+          <option value="stretch">stretch · distort to fill box</option>
+          <option value="crop">crop · keep native size, crop if needed</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Placement Notes</label>
+        <div class="hint">`fill` scales to cover the full box. `crop` never enlarges a smaller image.</div>
+      </div>
+    </div>
+
     <hr />
 
     <div class="grid-4">
