@@ -40,6 +40,12 @@ source .venv/bin/activate
 print-cards
 ```
 
+If you use `fish` instead of `bash`/`zsh`, activate the virtualenv with:
+
+```fish
+source .venv/bin/activate.fish
+```
+
 ## Usage
 
 ### Fully interactive (no arguments needed)
@@ -168,6 +174,8 @@ source .venv/bin/activate
 cd gui
 npm start
 ```
+
+With `fish`, use `source .venv/bin/activate.fish` before `npm start`.
 
 The app opens a window with two steps:
 

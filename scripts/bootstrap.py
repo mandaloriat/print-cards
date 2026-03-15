@@ -60,13 +60,12 @@ def install_gui() -> None:
 
 
 def print_next_steps(cli_enabled: bool, gui_enabled: bool) -> None:
-    activate = (
-        str(VENV_DIR / "Scripts" / "activate")
-        if os.name == "nt"
-        else f"source {VENV_DIR / 'bin' / 'activate'}"
-    )
     print("\nSetup complete.")
-    print(f"Activate the virtual environment: {activate}")
+    if os.name == "nt":
+        print(f"Activate in PowerShell: {VENV_DIR / 'Scripts' / 'Activate.ps1'}")
+    else:
+        print(f"Activate in bash/zsh: source {VENV_DIR / 'bin' / 'activate'}")
+        print(f"Activate in fish: source {VENV_DIR / 'bin' / 'activate.fish'}")
     if cli_enabled:
         print(f"Run the CLI: {venv_bin(VENV_DIR, 'print-cards')}")
     if gui_enabled:
