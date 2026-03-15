@@ -1,8 +1,5 @@
 # print-cards
-
-Programmino per creare pdf con disposte alcune immagini a griglia per agevolare la stampa su fogli pre-tagliati.
-
-> **English summary:** A cross-platform CLI tool that generates a PDF with images arranged in a grid, perfectly centred on the page, so you can print on pre-cut sheets without alignment worries.
+A cross-platform CLI tool that generates a PDF with images arranged in a grid, perfectly centred on the page, so you can print on pre-cut sheets without alignment worries.
 
 ---
 
