@@ -14,10 +14,31 @@ Programmino per creare pdf con disposte alcune immagini a griglia per agevolare 
 ## Installation
 
 ```bash
-pip install .
+python3 scripts/bootstrap.py
 ```
 
-This installs the `print-cards` command.
+This command creates `.venv`, installs the Python CLI dependencies, and installs
+the Electron GUI dependencies.
+
+If you only need one side of the project:
+
+```bash
+python3 scripts/bootstrap.py --skip-gui
+python3 scripts/bootstrap.py --skip-cli
+```
+
+For local development:
+
+```bash
+python3 scripts/bootstrap.py --editable
+```
+
+After bootstrap:
+
+```bash
+source .venv/bin/activate
+print-cards
+```
 
 ## Usage
 
@@ -119,8 +140,7 @@ margin_top  = (page_height − (rows × element_height + (rows−1) × spacing_v
 ## Development
 
 ```bash
-pip install -e .
-pip install pytest
+python3 scripts/bootstrap.py --editable --skip-gui
 pytest
 ```
 
@@ -132,19 +152,19 @@ chooser, and hit **Generate PDF** — without ever touching the terminal.
 
 ### Requirements
 
-* Python 3.9+ with `print-cards` installed (`pip install .`)
+* Python 3.9+
 * Node.js 18+ and npm
 
 ### Installation
 
 ```bash
-cd gui
-npm install
+python3 scripts/bootstrap.py
 ```
 
 ### Running
 
 ```bash
+source .venv/bin/activate
 cd gui
 npm start
 ```
