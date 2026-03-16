@@ -128,6 +128,11 @@ class TestGridLayoutValidate:
         assert abs(layout.resolved_margin_left() - 55.0) < 0.5
         assert abs(layout.resolved_margin_top() - 98.5) < 0.5
 
+    def test_offset_is_applied_during_validation(self):
+        layout = self._base(rows=1, cols=1, element_width=50.0, element_height=50.0, offset_x=-200.0)
+        with pytest.raises(ValueError, match="too wide"):
+            layout.validate()
+
 
 # ---------------------------------------------------------------------------
 # GridLayout dimension helpers

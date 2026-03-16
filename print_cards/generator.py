@@ -69,6 +69,8 @@ class GridLayout:
     margin_bottom: Optional[float] = None
     margin_left: Optional[float] = None
     margin_right: Optional[float] = None
+    offset_x: float = 0.0
+    offset_y: float = 0.0
     page_format: str = "A4"
     image_fit: str = "fit"
 
@@ -120,8 +122,8 @@ class GridLayout:
             valid = ", ".join(IMAGE_FIT_MODES)
             raise ValueError(f"image_fit must be one of: {valid}")
 
-        ml = self.resolved_margin_left()
-        mt = self.resolved_margin_top()
+        ml = self.resolved_margin_left() + self.offset_x
+        mt = self.resolved_margin_top() + self.offset_y
 
         if ml < 0:
             raise ValueError(
@@ -234,8 +236,8 @@ class PDFGenerator:
 
         c = canvas.Canvas(output_path, pagesize=page_size)
 
-        ml_mm = self.layout.resolved_margin_left()
-        mt_mm = self.layout.resolved_margin_top()
+        ml_mm = self.layout.resolved_margin_left() + self.layout.offset_x
+        mt_mm = self.layout.resolved_margin_top() + self.layout.offset_y
 
         ew_pt = self.layout.element_width * mm
         eh_pt = self.layout.element_height * mm

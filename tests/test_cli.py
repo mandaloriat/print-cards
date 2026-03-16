@@ -58,9 +58,9 @@ class TestCLIRun:
         img = _make_png(tmp_path)
         output = str(tmp_path / "interactive.pdf")
 
-        # Interactive layout: format, rows, cols, ew, eh, sh, sv, image_fit, mt, mb, ml, mr
+        # Interactive layout: format, rows, cols, ew, eh, sh, sv, image_fit, mt, mb, ml, mr, ox, oy
         # then 1 image prompt
-        layout_inputs = ["A4", "1", "1", "50", "50", "0", "0", "fit", "", "", "", ""]
+        layout_inputs = ["A4", "1", "1", "50", "50", "0", "0", "fit", "", "", "", "", "0", "0"]
         image_inputs = [img]
         with patch("builtins.input", side_effect=layout_inputs + image_inputs):
             run(["--output", output])
@@ -113,6 +113,18 @@ class TestCLIRun:
                 "--rows", "1", "--cols", "1",
                 "--element-width", "60", "--element-height", "40",
                 "--image-fit", "fill",
+                "--output", output,
+            ])
+        assert Path(output).exists()
+
+    def test_offset_flags(self, tmp_path):
+        img = _make_png(tmp_path)
+        output = str(tmp_path / "offset.pdf")
+        with patch("builtins.input", side_effect=[img]):
+            run([
+                "--rows", "1", "--cols", "1",
+                "--element-width", "60", "--element-height", "40",
+                "--offset-x", "-4.5",
                 "--output", output,
             ])
         assert Path(output).exists()
