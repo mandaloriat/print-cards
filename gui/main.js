@@ -105,6 +105,9 @@ ipcMain.handle('generate-pdf', async (_event, config) => {
       args.push('--image', `${key},${imgPath}`);
     }
 
+    if (config.backImage)
+      args.push('--back', config.backImage);
+
     // Try python3 first; fall back to python on Windows / some environments.
     const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
 

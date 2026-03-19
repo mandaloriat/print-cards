@@ -7,6 +7,9 @@
 /** Images selected by the user: key = "ROW,COL", value = absolute file path. */
 const selectedImages = {};
 
+/** Single back image used for all cells without an individual image. */
+let backImagePath = null;
+
 /** Current layout config set when clicking "Set Layout". */
 let layout = null;
 
@@ -123,6 +126,27 @@ function buildImageGrid(rows, cols) {
 }
 
 // ---------------------------------------------------------------------------
+// Back image picker
+// ---------------------------------------------------------------------------
+
+document.getElementById('btn-choose-back').addEventListener('click', async () => {
+  const filePath = await window.api.openImage();
+  if (!filePath) return;
+
+  backImagePath = filePath;
+  document.getElementById('back-image-path').value = filePath;
+  document.getElementById('btn-clear-back').style.display = '';
+  hideStatus();
+});
+
+document.getElementById('btn-clear-back').addEventListener('click', () => {
+  backImagePath = null;
+  document.getElementById('back-image-path').value = '';
+  document.getElementById('btn-clear-back').style.display = 'none';
+  hideStatus();
+});
+
+// ---------------------------------------------------------------------------
 // Step 1 → Step 2: Set Layout
 // ---------------------------------------------------------------------------
 
@@ -180,16 +204,16 @@ document.getElementById('btn-generate').addEventListener('click', async () => {
 
   if (!layout) return;
 
-  // Check all images are chosen
+  // Check all images are chosen (per-cell or via back image)
   const missing = [];
   for (let r = 1; r <= layout.rows; r++) {
     for (let c = 1; c <= layout.cols; c++) {
       const key = `${r},${c}`;
-      if (!selectedImages[key]) missing.push(`(${r}, ${c})`);
+      if (!selectedImages[key] && !backImagePath) missing.push(`(${r}, ${c})`);
     }
   }
   if (missing.length) {
-    showStatus('error', `Please choose an image for: ${missing.join(', ')}`);
+    showStatus('error', `Please choose an image (or set a back image) for: ${missing.join(', ')}`);
     return;
   }
 
@@ -215,6 +239,7 @@ document.getElementById('btn-generate').addEventListener('click', async () => {
     format:        layout.format,
     outputPath,
     images:        Object.assign({}, selectedImages),
+    backImage:     backImagePath,
   };
 
   // Disable the button and show a spinner while generating

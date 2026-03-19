@@ -290,6 +290,18 @@
   <div class="card" id="step-images" style="display:none;">
     <h2>2 · Images</h2>
 
+    <div style="margin-bottom: 14px;">
+      <label style="font-size:12px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; display:block; margin-bottom:4px;">Back Image (optional)</label>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <input type="text" id="back-image-path" readonly
+               placeholder="No back image — specify one per cell below"
+               style="flex:1; padding:7px 10px; border:1px solid var(--border); border-radius:5px; font-size:13px; color:var(--text); background:var(--surface);" />
+        <button class="btn btn-secondary" id="btn-choose-back">Choose…</button>
+        <button class="btn btn-secondary" id="btn-clear-back" style="display:none;">✕ Clear</button>
+      </div>
+      <p class="hint">When set, used for every cell that has no individual image selected.</p>
+    </div>
+
     <div id="image-grid"></div>
 
     <hr />
