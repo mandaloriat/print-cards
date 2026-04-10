@@ -69,6 +69,27 @@ def _prompt_image_path(row: int, col: int) -> str:
         print(f"  File not found: {expanded}. Please try again.")
 
 
+def _prompt_back_image_path() -> Optional[str]:
+    """Optionally prompt for a single back image used for all grid positions.
+
+    Returns the resolved path, or *None* if the user leaves the prompt blank.
+    """
+    while True:
+        try:
+            raw = input(
+                "  Back image file (leave empty to specify per position): "
+            ).strip()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            sys.exit(0)
+        if not raw:
+            return None
+        expanded = os.path.expandvars(os.path.expanduser(raw))
+        if Path(expanded).is_file():
+            return str(Path(expanded).resolve())
+        print(f"  File not found: {expanded}. Please try again.")
+
+
 def _prompt_output_path(default_dir: Path) -> str:
     """Prompt for the output PDF file path."""
     default_path = str(default_dir / "output.pdf")
@@ -262,6 +283,15 @@ def run(args=None) -> None:
             "positions are covered the tool runs fully non-interactively."
         ),
     )
+    parser.add_argument(
+        "--back",
+        default=None,
+        metavar="PATH",
+        help=(
+            "A single image file used for every grid position not explicitly "
+            "covered by --image. Convenient when all cards share the same back face."
+        ),
+    )
 
     parsed = parser.parse_args(args)
 
@@ -313,25 +343,40 @@ def run(args=None) -> None:
                 sys.exit(1)
             cli_images[(row_idx, col_idx)] = parts[2]
 
+    # Resolve the --back image path if supplied.
+    back_path: Optional[str] = None
+    if parsed.back:
+        expanded = os.path.expandvars(os.path.expanduser(parsed.back))
+        back_path = str(Path(expanded).resolve())
+
     all_positions = {
         (r, c)
         for r in range(1, layout.rows + 1)
         for c in range(1, layout.cols + 1)
     }
 
-    if all_positions.issubset(cli_images.keys()):
-        # Every position was supplied via --image; run non-interactively.
-        images = {pos: cli_images[pos] for pos in all_positions}
+    remaining = all_positions - cli_images.keys()
+
+    if back_path is not None or not remaining:
+        # Non-interactive: every position is covered by --image and/or --back.
+        images = {
+            pos: (cli_images[pos] if pos in cli_images else back_path)
+            for pos in all_positions
+        }
     else:
         print(
             f"\nLayout: {layout.rows} row(s) × {layout.cols} col(s) on {layout.page_format} "
             f"({layout.element_width}×{layout.element_height} mm per element)\n"
             "Please provide an image file for each grid position:\n"
         )
+        back_path = _prompt_back_image_path()
         images = {}
         for row in range(1, layout.rows + 1):
             for col in range(1, layout.cols + 1):
-                images[(row, col)] = _prompt_image_path(row, col)
+                if back_path is not None:
+                    images[(row, col)] = back_path
+                else:
+                    images[(row, col)] = _prompt_image_path(row, col)
 
     # --- Output path ---
     if parsed.output:

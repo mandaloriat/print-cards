@@ -139,12 +139,52 @@ class TestCLIRun:
         img = _make_png(tmp_path)
         output = str(tmp_path / "partial.pdf")
         # 1×2 grid; only (1,1) supplied via flag → interactive mode prompts
-        # for both (1,1) and (1,2)
-        with patch("builtins.input", side_effect=[img, img]):
+        # for back image (blank → none) then for both (1,1) and (1,2)
+        with patch("builtins.input", side_effect=["", img, img]):
             run([
                 "--rows", "1", "--cols", "2",
                 "--element-width", "80", "--element-height", "60",
                 "--image", f"1,1,{img}",
+                "--output", output,
+            ])
+        assert Path(output).exists()
+
+    def test_back_flag_noninteractive(self, tmp_path):
+        """--back PATH fills all positions not covered by --image, no prompts."""
+        front = _make_png(tmp_path, name="front.png")
+        back = _make_png(tmp_path, name="back.png")
+        output = str(tmp_path / "back_test.pdf")
+        run([
+            "--rows", "2", "--cols", "2",
+            "--element-width", "80", "--element-height", "60",
+            "--image", f"1,1,{front}",
+            "--image", f"2,1,{front}",
+            "--back", back,
+            "--output", output,
+        ])
+        assert Path(output).exists()
+
+    def test_back_flag_covers_all_positions(self, tmp_path):
+        """--back alone (no --image) fills every position non-interactively."""
+        back = _make_png(tmp_path, name="back.png")
+        output = str(tmp_path / "all_back.pdf")
+        run([
+            "--rows", "2", "--cols", "2",
+            "--element-width", "80", "--element-height", "60",
+            "--back", back,
+            "--output", output,
+        ])
+        assert Path(output).exists()
+
+    def test_interactive_back_image_skips_per_cell_prompts(self, tmp_path):
+        """In interactive mode, providing a back image uses it for all positions."""
+        back = _make_png(tmp_path, name="back.png")
+        output = str(tmp_path / "interactive_back.pdf")
+        # Interactive: back image prompt → path, then no per-cell prompts
+        with patch("builtins.input", side_effect=[back]):
+            run([
+                "--rows", "1", "--cols", "2",
+                "--element-width", "80", "--element-height", "60",
                 "--output", output,
             ])
         assert Path(output).exists()

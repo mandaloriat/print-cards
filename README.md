@@ -88,6 +88,7 @@ usage: print-cards [-h] [--rows ROWS] [--cols COLS] [--format FORMAT]
 | `--margin-right` | | Right margin in mm (default: auto-centred) |
 | `--output` | `-o` | Output PDF path (asked interactively if omitted) |
 | `--image` | | Image for a grid position as `ROW,COL,PATH`. Repeat for every cell. When all positions are covered the tool runs non-interactively (used by the GUI). |
+| `--back` | | A single image file used for every grid position not explicitly covered by `--image`. Handy when all cards share the same back face. |
 
 Any dimension option left out on the command line will be asked interactively.
 
@@ -112,14 +113,23 @@ The tool then asks for 10 image paths one by one:
 Layout: 5 row(s) × 2 col(s) on A4 (85.6×54.0 mm per element)
 Please provide an image file for each grid position:
 
-  Image file for element (1,1): /path/to/front.png
-  Image file for element (1,2): /path/to/back.png
-  ...
+  Back image file (leave empty to specify per position): /path/to/back.png
 
 Output PDF file path [/usr/local/lib/.../print_cards/output.pdf]: ~/Desktop/cards.pdf
 
 Generating PDF …
 PDF saved to: /home/user/Desktop/cards.pdf
+```
+
+Or, if you prefer to pass everything on the command line (e.g. 5 different fronts
+but a single shared back):
+
+```bash
+print-cards -r 5 -c 2 --element-width 85.6 --element-height 54 \
+  --image 1,1,card1.png --image 2,1,card2.png --image 3,1,card3.png \
+  --image 4,1,card4.png --image 5,1,card5.png \
+  --back back.png \
+  --output ~/Desktop/cards.pdf
 ```
 
 **Playing cards (63 × 88 mm), 3 × 3 grid, with explicit margins:**
