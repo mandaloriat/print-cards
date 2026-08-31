@@ -14,6 +14,7 @@ from print_cards.generator import (
     PDFGenerator,
     PAGE_FORMATS,
     get_page_format,
+    parse_hex_color,
 )
 
 
@@ -313,3 +314,88 @@ class TestPDFGenerator:
             output = str(tmp_path / f"out_{mode}.pdf")
             PDFGenerator(layout).generate({(1, 1): img}, output)
             assert Path(output).exists()
+
+    def test_bleed_generates_pdf(self, tmp_path):
+        layout = GridLayout(
+            rows=2, cols=2,
+            element_width=60.0, element_height=85.0,
+            spacing_h=4.0, spacing_v=4.0,
+            bleed_width=2.0, bleed_color="#1d1d1d",
+        )
+        img = _make_png(tmp_path)
+        images = {(1, 1): img, (1, 2): img, (2, 1): img, (2, 2): img}
+        output = str(tmp_path / "bleed.pdf")
+        PDFGenerator(layout).generate(images, output)
+        assert Path(output).exists()
+        assert Path(output).stat().st_size > 100
+
+    def test_bleed_tile_is_larger_than_trim(self, tmp_path):
+        """The bleed tile must extend beyond the trim box on every side."""
+        img = _make_png(tmp_path, width=60, height=85)
+        reader = PDFGenerator._build_bleed_tile(
+            img, box_width_pt=60.0, box_height_pt=85.0,
+            bleed_pt=6.0, color=(29, 29, 29), mode="fit",
+        )
+        w, h = reader.getSize()
+        assert w > 60.0 and h > 85.0
+
+    def test_bleed_tile_flattens_transparent_corner(self, tmp_path):
+        """A fully transparent corner must become the bleed colour, not black."""
+        from PIL import Image
+
+        src = Image.new("RGBA", (80, 80), (200, 50, 50, 255))
+        # punch a transparent block in the top-left corner
+        for x in range(20):
+            for y in range(20):
+                src.putpixel((x, y), (0, 0, 0, 0))
+        p = tmp_path / "rgba.png"
+        src.save(p)
+
+        reader = PDFGenerator._build_bleed_tile(
+            str(p), box_width_pt=80.0, box_height_pt=80.0,
+            bleed_pt=0.0, color=(29, 29, 29), mode="stretch",
+        )
+        tile = reader._image  # underlying PIL image
+        assert tile.convert("RGB").getpixel((2, 2)) == (29, 29, 29)
+
+
+# ---------------------------------------------------------------------------
+# parse_hex_color
+# ---------------------------------------------------------------------------
+
+class TestParseHexColor:
+    def test_full_hex(self):
+        assert parse_hex_color("#1d1d1d") == (29, 29, 29)
+
+    def test_without_hash(self):
+        assert parse_hex_color("ffffff") == (255, 255, 255)
+
+    def test_shorthand(self):
+        assert parse_hex_color("#f0a") == (255, 0, 170)
+
+    def test_invalid_length_raises(self):
+        with pytest.raises(ValueError, match="Invalid hex colour"):
+            parse_hex_color("#12345")
+
+    def test_non_hex_digits_raise(self):
+        with pytest.raises(ValueError, match="Invalid hex colour"):
+            parse_hex_color("#zzzzzz")
+
+
+class TestBleedValidation:
+    def _base(self, **kwargs) -> GridLayout:
+        defaults = dict(rows=1, cols=1, element_width=60.0, element_height=85.0)
+        defaults.update(kwargs)
+        return GridLayout(**defaults)
+
+    def test_negative_bleed_raises(self):
+        with pytest.raises(ValueError, match="bleed_width"):
+            self._base(bleed_width=-1.0).validate()
+
+    def test_bad_bleed_color_raises(self):
+        with pytest.raises(ValueError, match="Invalid hex colour"):
+            self._base(bleed_width=2.0, bleed_color="nope").validate()
+
+    def test_bleed_disabled_ignores_color(self):
+        # bleed_width == 0 -> colour never parsed, must not raise
+        self._base(bleed_width=0.0, bleed_color="nope").validate()

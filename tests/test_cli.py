@@ -58,9 +58,10 @@ class TestCLIRun:
         img = _make_png(tmp_path)
         output = str(tmp_path / "interactive.pdf")
 
-        # Interactive layout: format, rows, cols, ew, eh, sh, sv, image_fit, mt, mb, ml, mr, ox, oy
+        # Interactive layout: format, rows, cols, ew, eh, sh, sv, image_fit,
+        # mt, mb, ml, mr, ox, oy, bleed_width (0 -> no colour prompt)
         # then 1 image prompt
-        layout_inputs = ["A4", "1", "1", "50", "50", "0", "0", "fit", "", "", "", "", "0", "0"]
+        layout_inputs = ["A4", "1", "1", "50", "50", "0", "0", "fit", "", "", "", "", "0", "0", "0"]
         image_inputs = [img]
         with patch("builtins.input", side_effect=layout_inputs + image_inputs):
             run(["--output", output])
