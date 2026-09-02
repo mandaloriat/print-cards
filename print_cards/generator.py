@@ -94,6 +94,8 @@ class GridLayout:
     image_fit: str = "fit"
     bleed_width: float = 0.0
     bleed_color: str = "#ffffff"
+    crop_marks: float = 0.0
+    crop_mark_color: str = "#000000"
 
     def page_size_pt(self) -> Tuple[float, float]:
         """Return page size in ReportLab points."""
@@ -147,6 +149,11 @@ class GridLayout:
         if self.bleed_width > 0:
             # Raises ValueError if the colour cannot be parsed.
             parse_hex_color(self.bleed_color)
+        if self.crop_marks < 0:
+            raise ValueError("crop_marks must be >= 0")
+        if self.crop_marks > 0:
+            # Raises ValueError if the colour cannot be parsed.
+            parse_hex_color(self.crop_mark_color)
 
         ml = self.resolved_margin_left() + self.offset_x
         mt = self.resolved_margin_top() + self.offset_y
@@ -332,9 +339,11 @@ class PDFGenerator:
         mt_pt = mt_mm * mm
 
         use_bleed = self.layout.bleed_width and self.layout.bleed_width > 0
+        # Kept even when bleed is disabled: it is the distance crop marks are
+        # pushed outward so they sit *outside* the card's own bleed ring.
+        bleed_pt = (self.layout.bleed_width or 0.0) * mm
         if use_bleed:
             bleed_rgb = parse_hex_color(self.layout.bleed_color)
-            bleed_pt = self.layout.bleed_width * mm
 
         for row in range(1, self.layout.rows + 1):
             for col in range(1, self.layout.cols + 1):
@@ -397,5 +406,41 @@ class PDFGenerator:
 
                 if clip:
                     c.restoreState()
+
+        # --- Crop marks -----------------------------------------------------
+        # Drawn in a second pass, on top of every card, so a neighbour's bleed
+        # tile (drawn later in the loop above) can never cover them.  Each trim
+        # corner gets an outward-pointing horizontal + vertical tick, offset by
+        # the bleed so the marks stay *outside* the card's ink and only show in
+        # the gaps between cards, indicating exactly where the trim edges are.
+        if self.layout.crop_marks and self.layout.crop_marks > 0:
+            mark_len_pt = self.layout.crop_marks * mm
+            r, g, b = parse_hex_color(self.layout.crop_mark_color)
+            c.setStrokeColorRGB(r / 255.0, g / 255.0, b / 255.0)
+            c.setLineWidth(0.3)
+            c.setLineCap(0)  # butt caps so ticks end exactly at the trim line
+            off = bleed_pt
+            for row in range(1, self.layout.rows + 1):
+                for col in range(1, self.layout.cols + 1):
+                    if images.get((row, col)) is None:
+                        continue
+                    x_pt = ml_pt + (col - 1) * (ew_pt + sh_pt)
+                    y_from_top_pt = mt_pt + (row - 1) * (eh_pt + sv_pt)
+                    y_pt = page_h_pt - y_from_top_pt - eh_pt
+                    left, right = x_pt, x_pt + ew_pt
+                    bottom, top = y_pt, y_pt + eh_pt
+
+                    # bottom-left corner
+                    c.line(left - off - mark_len_pt, bottom, left - off, bottom)
+                    c.line(left, bottom - off - mark_len_pt, left, bottom - off)
+                    # bottom-right corner
+                    c.line(right + off, bottom, right + off + mark_len_pt, bottom)
+                    c.line(right, bottom - off - mark_len_pt, right, bottom - off)
+                    # top-left corner
+                    c.line(left - off - mark_len_pt, top, left - off, top)
+                    c.line(left, top + off, left, top + off + mark_len_pt)
+                    # top-right corner
+                    c.line(right + off, top, right + off + mark_len_pt, top)
+                    c.line(right, top + off, right, top + off + mark_len_pt)
 
         c.save()

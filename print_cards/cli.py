@@ -137,6 +137,8 @@ def _build_layout_from_args(args: "argparse.Namespace") -> GridLayout:  # noqa: 
         image_fit=args.image_fit,
         bleed_width=args.bleed_width,
         bleed_color=args.bleed_color,
+        crop_marks=args.crop_marks,
+        crop_mark_color=args.crop_mark_color,
     )
 
 
@@ -183,6 +185,16 @@ def _build_layout_interactive() -> GridLayout:
     if bw_raw > 0:
         bc_raw = _prompt("Bleed colour (hex, e.g. #1d1d1d)", "#ffffff")
 
+    print(
+        "\nCrop marks are thin ticks in the gaps pointing at each card's trim "
+        "edges, to guide cutting. They sit outside the bleed. Leave 0 to "
+        "disable.\n"
+    )
+    cm_raw = _prompt_float("Crop mark length (mm)", 0.0)
+    cmc_raw = "#000000"
+    if cm_raw > 0:
+        cmc_raw = _prompt("Crop mark colour (hex)", "#000000")
+
     def _parse_optional_float(s: str) -> Optional[float]:
         s = s.strip()
         if not s:
@@ -209,6 +221,8 @@ def _build_layout_interactive() -> GridLayout:
         image_fit=image_fit,
         bleed_width=bw_raw,
         bleed_color=bc_raw,
+        crop_marks=cm_raw,
+        crop_mark_color=cmc_raw,
     )
 
 
@@ -301,6 +315,20 @@ def run(args=None) -> None:
         "--bleed-color", "--bleed-colour", default="#ffffff",
         metavar="HEX",
         help="Bleed colour as a hex string, e.g. #1d1d1d (default: #ffffff)",
+    )
+    parser.add_argument(
+        "--crop-marks", type=float, default=0.0,
+        metavar="MM",
+        help=(
+            "Length in mm of crop (trim) marks drawn in the gaps at each card "
+            "corner to guide cutting; they sit outside the bleed "
+            "(default: 0 = disabled)"
+        ),
+    )
+    parser.add_argument(
+        "--crop-mark-color", "--crop-mark-colour", default="#000000",
+        metavar="HEX",
+        help="Crop mark colour as a hex string (default: #000000)",
     )
     parser.add_argument(
         "--offset-x", type=float, default=0.0,
