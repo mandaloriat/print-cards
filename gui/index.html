@@ -279,7 +279,17 @@
         <input type="number" id="margin-right" step="0.1" placeholder="auto" />
       </div>
     </div>
-    <p class="hint">Leave margins blank to auto-centre the grid on the page.</p>
+    <div class="grid-2" style="margin-top: 12px;">
+      <div class="field">
+        <label>Offset X (mm)</label>
+        <input type="number" id="offset-x" step="0.1" value="0" />
+      </div>
+      <div class="field">
+        <label>Offset Y (mm)</label>
+        <input type="number" id="offset-y" step="0.1" value="0" />
+      </div>
+    </div>
+    <p class="hint">Leave margins blank to auto-centre the grid on the page. Use offsets to compensate for printer drift; negative X shifts left.</p>
 
     <div class="row-actions">
       <button class="btn btn-primary" id="btn-set-layout">Set Layout →</button>

@@ -74,6 +74,7 @@ ipcMain.handle('dialog:save-pdf', async () => {
  *   spacingH, spacingV,
  *   imageFit,
  *   marginTop, marginBottom, marginLeft, marginRight,  ('' = auto)
+ *   offsetX, offsetY,
  *   format, outputPath,
  *   images: { "ROW,COL": "/path/to/image.png", … }
  */
@@ -89,6 +90,8 @@ ipcMain.handle('generate-pdf', async (_event, config) => {
       '--spacing-h',      String(config.spacingH),
       '--spacing-v',      String(config.spacingV),
       '--format',         String(config.format),
+      '--offset-x',       String(config.offsetX),
+      '--offset-y',       String(config.offsetY),
       '--output',         String(config.outputPath),
     ];
 

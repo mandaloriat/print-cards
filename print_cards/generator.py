@@ -32,6 +32,25 @@ PAGE_FORMATS: Dict[str, Tuple[float, float]] = {
 IMAGE_FIT_MODES = ("fit", "fill", "stretch", "crop")
 
 
+def parse_hex_color(value: str) -> Tuple[int, int, int]:
+    """Parse a ``#RGB`` / ``#RRGGBB`` hex string into an ``(r, g, b)`` tuple.
+
+    Raises:
+        ValueError: If *value* is not a valid hex colour.
+    """
+    s = value.strip().lstrip("#")
+    if len(s) == 3:
+        s = "".join(ch * 2 for ch in s)
+    if len(s) != 6:
+        raise ValueError(
+            f"Invalid hex colour {value!r}: expected '#RGB' or '#RRGGBB'"
+        )
+    try:
+        return int(s[0:2], 16), int(s[2:4], 16), int(s[4:6], 16)
+    except ValueError:
+        raise ValueError(f"Invalid hex colour {value!r}: non-hex digits")
+
+
 def get_page_format(name: str) -> Tuple[float, float]:
     """Return the ReportLab page size tuple for the given format name.
 
@@ -69,8 +88,12 @@ class GridLayout:
     margin_bottom: Optional[float] = None
     margin_left: Optional[float] = None
     margin_right: Optional[float] = None
+    offset_x: float = 0.0
+    offset_y: float = 0.0
     page_format: str = "A4"
     image_fit: str = "fit"
+    bleed_width: float = 0.0
+    bleed_color: str = "#ffffff"
 
     def page_size_pt(self) -> Tuple[float, float]:
         """Return page size in ReportLab points."""
@@ -119,9 +142,14 @@ class GridLayout:
         if self.image_fit not in IMAGE_FIT_MODES:
             valid = ", ".join(IMAGE_FIT_MODES)
             raise ValueError(f"image_fit must be one of: {valid}")
+        if self.bleed_width < 0:
+            raise ValueError("bleed_width must be >= 0")
+        if self.bleed_width > 0:
+            # Raises ValueError if the colour cannot be parsed.
+            parse_hex_color(self.bleed_color)
 
-        ml = self.resolved_margin_left()
-        mt = self.resolved_margin_top()
+        ml = self.resolved_margin_left() + self.offset_x
+        mt = self.resolved_margin_top() + self.offset_y
 
         if ml < 0:
             raise ValueError(
@@ -199,6 +227,65 @@ class PDFGenerator:
         )
         return draw_x_pt, draw_y_pt, draw_width_pt, draw_height_pt, clip
 
+    @staticmethod
+    def _build_bleed_tile(
+        img_path: str,
+        box_width_pt: float,
+        box_height_pt: float,
+        bleed_pt: float,
+        color: Tuple[int, int, int],
+        mode: str,
+    ) -> "ImageReader":
+        """Build an ImageReader for a card padded with a solid bleed border.
+
+        The source image is placed inside the *trim* box (``box_width_pt`` ×
+        ``box_height_pt``) according to *mode*, on top of a solid *color*
+        background so any transparency (e.g. rounded corners) is flattened to
+        the bleed colour rather than black.  A *bleed_pt* border of the same
+        colour is added on every side, so the returned tile is larger than the
+        trim box and, when drawn, extends into the gaps between cards.
+        """
+        from PIL import Image
+
+        src = Image.open(img_path).convert("RGBA")
+        sw, sh = src.size
+
+        # Pixel density (px per point) that preserves source detail without
+        # upscaling it, floored at 300 dpi and capped to bound memory use.
+        density = max(sw / box_width_pt, sh / box_height_pt, 300.0 / 72.0)
+        density = min(density, 1200.0 / 72.0)
+
+        trim_w = max(1, round(box_width_pt * density))
+        trim_h = max(1, round(box_height_pt * density))
+        bleed_px = max(0, round(bleed_pt * density))
+
+        wr = trim_w / sw
+        hr = trim_h / sh
+        if mode == "stretch":
+            new_w, new_h = trim_w, trim_h
+        else:
+            if mode == "fit":
+                scale = min(wr, hr)
+            elif mode == "fill":
+                scale = max(wr, hr)
+            elif mode == "crop":
+                scale = min(1.0, max(wr, hr))
+            else:
+                scale = min(wr, hr)
+            new_w = max(1, round(sw * scale))
+            new_h = max(1, round(sh * scale))
+
+        resized = src.resize((new_w, new_h), Image.LANCZOS)
+
+        # Compose the art on a solid trim region (clips overflow for fill/crop),
+        # then centre that region on a solid tile that includes the bleed ring.
+        region = Image.new("RGBA", (trim_w, trim_h), color + (255,))
+        region.paste(resized, ((trim_w - new_w) // 2, (trim_h - new_h) // 2), resized)
+
+        tile = Image.new("RGB", (trim_w + 2 * bleed_px, trim_h + 2 * bleed_px), color)
+        tile.paste(region.convert("RGB"), (bleed_px, bleed_px))
+        return ImageReader(tile)
+
     def generate(
         self,
         images: Dict[Tuple[int, int], str],
@@ -234,8 +321,8 @@ class PDFGenerator:
 
         c = canvas.Canvas(output_path, pagesize=page_size)
 
-        ml_mm = self.layout.resolved_margin_left()
-        mt_mm = self.layout.resolved_margin_top()
+        ml_mm = self.layout.resolved_margin_left() + self.layout.offset_x
+        mt_mm = self.layout.resolved_margin_top() + self.layout.offset_y
 
         ew_pt = self.layout.element_width * mm
         eh_pt = self.layout.element_height * mm
@@ -243,6 +330,11 @@ class PDFGenerator:
         sv_pt = self.layout.spacing_v * mm
         ml_pt = ml_mm * mm
         mt_pt = mt_mm * mm
+
+        use_bleed = self.layout.bleed_width and self.layout.bleed_width > 0
+        if use_bleed:
+            bleed_rgb = parse_hex_color(self.layout.bleed_color)
+            bleed_pt = self.layout.bleed_width * mm
 
         for row in range(1, self.layout.rows + 1):
             for col in range(1, self.layout.cols + 1):
@@ -255,6 +347,26 @@ class PDFGenerator:
                 # Row 1 is the topmost row
                 y_from_top_pt = mt_pt + (row - 1) * (eh_pt + sv_pt)
                 y_pt = page_h_pt - y_from_top_pt - eh_pt
+
+                if use_bleed:
+                    # Draw the card enlarged by the bleed on every side so the
+                    # ink extends into the gaps between cards; the die-cut trim
+                    # box stays centred on (x_pt, y_pt, ew_pt, eh_pt).
+                    tile = self._build_bleed_tile(
+                        img_path, ew_pt, eh_pt, bleed_pt, bleed_rgb,
+                        self.layout.image_fit,
+                    )
+                    c.drawImage(
+                        tile,
+                        x_pt - bleed_pt,
+                        y_pt - bleed_pt,
+                        width=ew_pt + 2 * bleed_pt,
+                        height=eh_pt + 2 * bleed_pt,
+                        preserveAspectRatio=False,
+                        mask="auto",
+                    )
+                    continue
+
                 image = ImageReader(img_path)
                 image_width_pt, image_height_pt = image.getSize()
                 draw_x_pt, draw_y_pt, draw_width_pt, draw_height_pt, clip = self._image_box(

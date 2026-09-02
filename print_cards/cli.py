@@ -131,8 +131,12 @@ def _build_layout_from_args(args: "argparse.Namespace") -> GridLayout:  # noqa: 
         margin_bottom=args.margin_bottom,
         margin_left=args.margin_left,
         margin_right=args.margin_right,
+        offset_x=args.offset_x,
+        offset_y=args.offset_y,
         page_format=args.format,
         image_fit=args.image_fit,
+        bleed_width=args.bleed_width,
+        bleed_color=args.bleed_color,
     )
 
 
@@ -167,6 +171,17 @@ def _build_layout_interactive() -> GridLayout:
     mb_raw = _prompt("Bottom margin (mm) [auto]", "")
     ml_raw = _prompt("Left margin (mm) [auto]", "")
     mr_raw = _prompt("Right margin (mm) [auto]", "")
+    ox_raw = _prompt("Horizontal offset (mm) [0]", "0")
+    oy_raw = _prompt("Vertical offset (mm) [0]", "0")
+
+    print(
+        "\nBleed extends each card by a solid-colour border into the gaps, so "
+        "small sheet misalignment leaves no white edge. Leave 0 to disable.\n"
+    )
+    bw_raw = _prompt_float("Bleed width (mm)", 0.0)
+    bc_raw = "#ffffff"
+    if bw_raw > 0:
+        bc_raw = _prompt("Bleed colour (hex, e.g. #1d1d1d)", "#ffffff")
 
     def _parse_optional_float(s: str) -> Optional[float]:
         s = s.strip()
@@ -188,8 +203,12 @@ def _build_layout_interactive() -> GridLayout:
         margin_bottom=_parse_optional_float(mb_raw),
         margin_left=_parse_optional_float(ml_raw),
         margin_right=_parse_optional_float(mr_raw),
+        offset_x=float(ox_raw),
+        offset_y=float(oy_raw),
         page_format=fmt,
         image_fit=image_fit,
+        bleed_width=bw_raw,
+        bleed_color=bc_raw,
     )
 
 
@@ -269,6 +288,27 @@ def run(args=None) -> None:
     parser.add_argument(
         "--margin-right", type=float, default=None,
         help="Right margin in mm (default: auto-centred)",
+    )
+    parser.add_argument(
+        "--bleed-width", type=float, default=0.0,
+        help=(
+            "Bleed border in mm added around every card and extending into the "
+            "gaps, so slight sheet misalignment leaves no white edge "
+            "(default: 0 = disabled)"
+        ),
+    )
+    parser.add_argument(
+        "--bleed-color", "--bleed-colour", default="#ffffff",
+        metavar="HEX",
+        help="Bleed colour as a hex string, e.g. #1d1d1d (default: #ffffff)",
+    )
+    parser.add_argument(
+        "--offset-x", type=float, default=0.0,
+        help="Horizontal offset in mm applied after centring/margins (negative shifts left)",
+    )
+    parser.add_argument(
+        "--offset-y", type=float, default=0.0,
+        help="Vertical offset in mm applied after centring/margins (negative shifts up)",
     )
     parser.add_argument(
         "--output", "-o", default=None,

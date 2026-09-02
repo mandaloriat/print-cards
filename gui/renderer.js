@@ -168,6 +168,8 @@ document.getElementById('btn-set-layout').addEventListener('click', () => {
     marginBottom:  numVal('margin-bottom'),
     marginLeft:    numVal('margin-left'),
     marginRight:   numVal('margin-right'),
+    offsetX:       numVal('offset-x') || 0,
+    offsetY:       numVal('offset-y') || 0,
     format:        document.getElementById('format').value,
   };
 
@@ -236,6 +238,8 @@ document.getElementById('btn-generate').addEventListener('click', async () => {
     marginBottom:  layout.marginBottom,
     marginLeft:    layout.marginLeft,
     marginRight:   layout.marginRight,
+    offsetX:       layout.offsetX,
+    offsetY:       layout.offsetY,
     format:        layout.format,
     outputPath,
     images:        Object.assign({}, selectedImages),

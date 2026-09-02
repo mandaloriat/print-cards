@@ -80,6 +80,8 @@ usage: print-cards [-h] [--rows ROWS] [--cols COLS] [--format FORMAT]
 | `--element-width` | | Width of each element in **mm** |
 | `--element-height` | | Height of each element in **mm** |
 | `--image-fit` | | Image placement mode: `fit` *(default)*, `fill`, `stretch`, `crop` |
+| `--bleed-width` | | Bleed border in mm added around every card and extending into the gaps (default: 0 = disabled) |
+| `--bleed-color` | | Bleed colour as a hex string, e.g. `#1d1d1d` (default: `#ffffff`) |
 | `--spacing-h` | | Horizontal spacing between elements in mm (default: 0) |
 | `--spacing-v` | | Vertical spacing between elements in mm (default: 0) |
 | `--margin-top` | | Top margin in mm (default: auto-centred) |
@@ -98,6 +100,31 @@ Image placement modes:
 * `fill`: preserve aspect ratio, fill the whole box, crop overflow
 * `stretch`: force the image to the box dimensions, even if it distorts
 * `crop`: keep native size when smaller, otherwise crop to the box without enlarging
+
+### Bleed
+
+Printing on pre-cut sheets is sensitive to small sheet misalignment: if the
+printed card is even a millimetre off, the die-cut edge exposes the white sheet.
+`--bleed-width` extends every card outward by a solid-colour border that reaches
+into the gaps between cards, so a slight misalignment still lands on ink. The
+element/spacing/margin values keep describing the **trim** (die-cut) geometry —
+the bleed is added on top and stays centred on each trim cell.
+
+The bleed colour also flattens any transparency in the source image (e.g.
+rounded corners saved with an alpha channel), so those areas take the bleed
+colour instead of turning black.
+
+```bash
+# 3×3 grid of 60×85 mm cards with a 2 mm dark bleed filling the 4 mm gaps
+print-cards -r 3 -c 3 --element-width 60 --element-height 85 \
+  --spacing-h 4 --spacing-v 4 \
+  --margin-left 11 --margin-right 11 --margin-top 17 --margin-bottom 17 \
+  --bleed-width 2 --bleed-color '#1d1d1d' \
+  --output ~/cards.pdf
+```
+
+A bleed of at most half the spacing keeps neighbouring cards from overlapping
+(e.g. 2 mm bleed with a 4 mm gap fills it exactly).
 
 ### Examples
 
