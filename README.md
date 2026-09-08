@@ -82,6 +82,8 @@ usage: print-cards [-h] [--rows ROWS] [--cols COLS] [--format FORMAT]
 | `--image-fit` | | Image placement mode: `fit` *(default)*, `fill`, `stretch`, `crop` |
 | `--bleed-width` | | Bleed border in mm added around every card and extending into the gaps (default: 0 = disabled) |
 | `--bleed-color` | | Bleed colour as a hex string, e.g. `#1d1d1d` (default: `#ffffff`) |
+| `--crop-marks` | | Length in mm of trim/crop marks drawn in the gaps at each card corner to guide cutting; sits outside the bleed (default: 0 = disabled) |
+| `--crop-mark-color` | | Crop mark colour as a hex string (default: `#000000`) |
 | `--spacing-h` | | Horizontal spacing between elements in mm (default: 0) |
 | `--spacing-v` | | Vertical spacing between elements in mm (default: 0) |
 | `--margin-top` | | Top margin in mm (default: auto-centred) |
@@ -125,6 +127,25 @@ print-cards -r 3 -c 3 --element-width 60 --element-height 85 \
 
 A bleed of at most half the spacing keeps neighbouring cards from overlapping
 (e.g. 2 mm bleed with a 4 mm gap fills it exactly).
+
+### Crop marks
+
+`--crop-marks` draws thin trim marks in the gaps at each card corner to guide
+cutting. Each corner gets an outward-pointing horizontal and vertical tick,
+collinear with the die-cut trim edges, so extending them across the sheet shows
+exactly where to cut. The marks are pushed outward by the bleed width, so they
+stay **outside** the card's ink and only appear in the gaps between cards. Marks
+of cards sharing a gap line up into a single continuous cut line.
+
+```bash
+# 2 mm dark bleed plus 3 mm black crop marks in the gaps
+print-cards -r 3 -c 3 --element-width 60 --element-height 85 \
+  --spacing-h 4 --spacing-v 4 \
+  --margin-left 11 --margin-right 11 --margin-top 17 --margin-bottom 17 \
+  --bleed-width 2 --bleed-color '#1d1d1d' \
+  --crop-marks 3 --crop-mark-color '#000000' \
+  --output ~/cards.pdf
+```
 
 ### Examples
 

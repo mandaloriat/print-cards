@@ -358,6 +358,50 @@ class TestPDFGenerator:
         tile = reader._image  # underlying PIL image
         assert tile.convert("RGB").getpixel((2, 2)) == (29, 29, 29)
 
+    def test_crop_marks_generate_pdf(self, tmp_path):
+        layout = GridLayout(
+            rows=2, cols=2,
+            element_width=60.0, element_height=85.0,
+            spacing_h=4.0, spacing_v=4.0,
+            crop_marks=3.0, crop_mark_color="#000000",
+        )
+        img = _make_png(tmp_path)
+        images = {(1, 1): img, (1, 2): img, (2, 1): img, (2, 2): img}
+        output = str(tmp_path / "crop.pdf")
+        PDFGenerator(layout).generate(images, output)
+        assert Path(output).exists()
+        assert Path(output).stat().st_size > 100
+
+    def test_crop_marks_with_bleed_generate_pdf(self, tmp_path):
+        """Crop marks and bleed together must produce a valid PDF."""
+        layout = GridLayout(
+            rows=2, cols=2,
+            element_width=60.0, element_height=85.0,
+            spacing_h=4.0, spacing_v=4.0,
+            bleed_width=2.0, bleed_color="#1d1d1d",
+            crop_marks=3.0, crop_mark_color="#ff0000",
+        )
+        img = _make_png(tmp_path)
+        images = {(1, 1): img, (1, 2): img, (2, 1): img, (2, 2): img}
+        output = str(tmp_path / "crop_bleed.pdf")
+        PDFGenerator(layout).generate(images, output)
+        assert Path(output).exists()
+
+    def test_crop_marks_emit_stroke_operators(self, tmp_path):
+        """Enabling crop marks must add stroke drawing operators to the PDF."""
+        layout = GridLayout(rows=1, cols=1, element_width=60.0, element_height=85.0)
+        layout_marks = GridLayout(
+            rows=1, cols=1, element_width=60.0, element_height=85.0,
+            crop_marks=3.0,
+        )
+        img = _make_png(tmp_path)
+        plain = tmp_path / "plain.pdf"
+        marked = tmp_path / "marked.pdf"
+        PDFGenerator(layout).generate({(1, 1): img}, str(plain))
+        PDFGenerator(layout_marks).generate({(1, 1): img}, str(marked))
+        # The marked PDF has extra path/stroke content, so it must be larger.
+        assert marked.stat().st_size > plain.stat().st_size
+
 
 # ---------------------------------------------------------------------------
 # parse_hex_color
@@ -399,3 +443,22 @@ class TestBleedValidation:
     def test_bleed_disabled_ignores_color(self):
         # bleed_width == 0 -> colour never parsed, must not raise
         self._base(bleed_width=0.0, bleed_color="nope").validate()
+
+
+class TestCropMarkValidation:
+    def _base(self, **kwargs) -> GridLayout:
+        defaults = dict(rows=1, cols=1, element_width=60.0, element_height=85.0)
+        defaults.update(kwargs)
+        return GridLayout(**defaults)
+
+    def test_negative_crop_marks_raises(self):
+        with pytest.raises(ValueError, match="crop_marks"):
+            self._base(crop_marks=-1.0).validate()
+
+    def test_bad_crop_mark_color_raises(self):
+        with pytest.raises(ValueError, match="Invalid hex colour"):
+            self._base(crop_marks=3.0, crop_mark_color="nope").validate()
+
+    def test_crop_marks_disabled_ignores_color(self):
+        # crop_marks == 0 -> colour never parsed, must not raise
+        self._base(crop_marks=0.0, crop_mark_color="nope").validate()
